@@ -7,12 +7,13 @@ Simulasi publish data dari ESP32 pada Wokwi ke broker public MQTT gratis HiveMQ
 
 ### Installation
 
-1. Create wokwi project using microcontroller ESP32:
+1. Create wokwi project using microcontroller ESP32
 2. Create wiring diagram like a picture below:
-   ![wiring-diagram-image](img/wiring.png)
-3. Place your Firebase service account JSON file in the project root and rename it to `firebaseServiceAccount.json`.
 
-4. Create a `.env` file in the project root and add your Firebase database URL:
+   ![wiring-diagram-image](img/wiring.png)
+4. Place your Firebase service account JSON file in the project root and rename it to `firebaseServiceAccount.json`.
+
+5. Create a `.env` file in the project root and add your Firebase database URL:
     ```plaintext
     DATABASE_URL=https://your-firebase-database-url
     ```
