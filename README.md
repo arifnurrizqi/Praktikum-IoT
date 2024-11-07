@@ -27,5 +27,5 @@ Selamat datang di repository Praktikum IoT! Repository ini disusun untuk memperm
 
 1. Clone repository ini:
    ```bash
-   git clone https://github.com/username/repo-name.git
+   git clone https://github.com/arifnurrizqi/Praktikum-IoT/tree/main
 
