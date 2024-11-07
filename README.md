@@ -6,7 +6,9 @@ Selamat datang di repository Praktikum IoT! Repository ini disusun untuk memperm
 
 1. **Job 1: Dasar IoT dan Koneksi Jaringan**  
    Pengenalan dasar IoT dan koneksi jaringan menggunakan MQTT. Pada job ini, kita akan menggunakan broker MQTT gratis untuk menghubungkan perangkat IoT.
-   [Job 1a: Dasar IoT dan Koneksi Jaringan - MQTT Publish](https://github.com/arifnurrizqi/Praktikum-IoT/tree/job-1a)
+   
+   [Job 1a: Dasar IoT dan Koneksi Jaringan - MQTT Publish](https://github.com/arifnurrizqi/Praktikum-IoT/tree/job-1a).
+   
    [Job 1b: Dasar IoT dan Koneksi Jaringan - MQTT Subscribe](https://github.com/arifnurrizqi/Praktikum-IoT/tree/job-1b)
 
 3. **[Job 2: Penggunaan Sensor dan Visualisasi](https://github.com/arifnurrizqi/Praktikum-IoT/tree/job-2)**  
