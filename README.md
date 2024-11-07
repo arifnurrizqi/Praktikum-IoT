@@ -1,5 +1,5 @@
 # Praktikum-IoT JOB 1 - Dasar IoT dan Koneksi Jaringan 
-##About
+## About
 Simulasi publish data dari ESP32 pada Wokwi ke broker public MQTT gratis HiveMQ
 ## Getting Started
 ### Prerequisites
