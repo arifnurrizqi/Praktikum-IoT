@@ -1,4 +1,5 @@
-# Praktikum-IoT JOB 1 Publish Data ke MQTT Broker
+# Praktikum-IoT JOB 1 - Dasar IoT dan Koneksi Jaringan 
+##About
 Simulasi publish data dari ESP32 pada Wokwi ke broker public MQTT gratis HiveMQ
 ## Getting Started
 ### Prerequisites
@@ -11,7 +12,8 @@ Simulasi publish data dari ESP32 pada Wokwi ke broker public MQTT gratis HiveMQ
 2. Create wiring diagram like a picture below:
 
    ![wiring-diagram-image](img/wiring.png)
-4. Place your Firebase service account JSON file in the project root and rename it to `firebaseServiceAccount.json`.
+   
+4. Copy isi dari file ![program.ino](program/program.ino) 
 
 5. Create a `.env` file in the project root and add your Firebase database URL:
     ```plaintext
