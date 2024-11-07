@@ -14,8 +14,8 @@ Simulasi publish data dari ESP32 pada Wokwi ke broker public MQTT gratis HiveMQ
    ![wiring-diagram-image](img/wiring.png)
    
 4. Copy isi dari file  [ESP32 program](program/program.ino)
-
-5. Create a `.env` file in the project root and add your Firebase database URL:
+5. Paste kan pada project wokwi anda
+6. Pada program baris ke `14.` yang berisikan program seperti berikut, silahkan ubah `PRAKTIKIOT/ARIFF` menjadi nama topic untuk koneksi MQTT anda
     ```plaintext
-    DATABASE_URL=https://your-firebase-database-url
+    const char* topic = "PRAKTIKIOT/ARIFF";
     ```
