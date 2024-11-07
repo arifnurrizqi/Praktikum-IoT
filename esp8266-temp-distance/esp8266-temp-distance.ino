@@ -19,7 +19,7 @@ const char* distance_topic = "esp32-ariff/distance";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-DHT dht(DHT_PIN, DHT22);
+DHT dht(DHT_PIN, DHT11);
 long lastMsg = 0;
 float temperature = 0;
 float distance = 0;
