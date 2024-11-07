@@ -13,7 +13,7 @@ Simulasi publish data dari ESP32 pada Wokwi ke broker public MQTT gratis HiveMQ
 
    ![wiring-diagram-image](img/wiring.png)
    
-4. Copy isi dari file ![program.ino](program/program.ino) 
+4. Copy isi dari file (program/program.ino)
 
 5. Create a `.env` file in the project root and add your Firebase database URL:
     ```plaintext
