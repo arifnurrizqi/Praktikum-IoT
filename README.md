@@ -19,3 +19,5 @@ Simulasi publish data dari ESP32 pada Wokwi ke broker public MQTT gratis HiveMQ
     ```plaintext
     const char* topic = "PRAKTIKIOT/ARIFF";
     ```
+7. Buka HiveMQ websocket client, lalu masukan nama topic yang sama seperti pada program ESP pada tab subscribtions
+8. Saat MQTT connected pada ESP, tekan-tekan tombol yang terhubung dengan ESP lalu amati apakah data masuk ke subscribtions HiveMQ websocket client atau tidak
