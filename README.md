@@ -21,4 +21,7 @@ Simulasi publish data dari ESP32 pada Wokwi ke broker public MQTT gratis HiveMQ
     ```
 7. Buka HiveMQ websocket client, lalu masukan nama topic yang sama seperti pada program ESP pada tab subscribtions
 8. Pada tab publish di HiveMQ websocket client silahkan masukan nama topic yang sama seperti pada program ESP
-9. Saat MQTT connected pada ESP, masukan angka 1 atau 0 lalu tekan publish, amati apakah data 1 atau 0 ini masuk ke ESP dan lampu pada ESP hidup mati 
+
+   ![HiveMQ-websocket-client-image](websocket-client.png)
+   
+10. Saat MQTT connected pada ESP, masukan angka 1 atau 0 lalu tekan publish, amati apakah data 1 atau 0 ini masuk ke ESP dan lampu pada ESP hidup mati 
