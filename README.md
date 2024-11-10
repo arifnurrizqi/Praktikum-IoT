@@ -25,15 +25,14 @@ Implementasi sensor dan visualisasi data menggunakan MQTT yang dikombinasikan de
 
    ![wiring-diagram-image](img/wiring-esp8266.png)
    
-5. Program menggunakan program (jika anda menggunakan ESP32)->  [ESP32 program](esp32-temp-distance/esp32-temp-distance.ino)
-6. Program menggunakan program (jika anda menggunakan ESP8266)->  [ESP8266 program](esp8266-temp-distance/esp8266-temp-distance.ino)
-7. 
-8. Pada program baris ke `14` dan `15` yang berisikan program ssid dan passw ssid, silahkan sesuaikan dengan nama ssid yang akan anda gunakan untuk koneksi internet
+4. Program menggunakan program (jika anda menggunakan ESP32)->  [ESP32 program](esp32-temp-distance/esp32-temp-distance.ino)
+5. Program menggunakan program (jika anda menggunakan ESP8266)->  [ESP8266 program](esp8266-temp-distance/esp8266-temp-distance.ino)
+6. Pada program baris ke `14` dan `15` yang berisikan program ssid dan passw ssid, silahkan sesuaikan dengan nama ssid yang akan anda gunakan untuk koneksi internet
     ```plaintext
     const char* ssid     = "your-ssid"; //your wifi ssid
     const char* password = "ssid-passw"; //your wifi password
     ```
-9. Pada program baris ke `17` dan `18` yang berisikan program topic temperature dan distance, silahkan sesuaikan dengan nama topic teman-teman
+7. Pada program baris ke `17` dan `18` yang berisikan program topic temperature dan distance, silahkan sesuaikan dengan nama topic teman-teman
     ```plaintext
     const char* temperature_topic = "your-topic/temp";
     const char* distance_topic = "your-topic/distance";
