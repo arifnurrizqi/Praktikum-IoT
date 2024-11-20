@@ -1,11 +1,10 @@
-# Praktikum-IoT JOB 2 - Penggunaan Sensor dan Visualisasi
+# Praktikum-IoT JOB 3 - Pengkondisian dan Pengolahan Data
 ## About
-Implementasi sensor dan visualisasi data menggunakan MQTT yang dikombinasikan dengan Node-RED. Job ini akan membantu memahami cara pengiriman dan tampilan data sensor dalam real-time.
+Job ini berfokus pada pengolahan data dengan platform Blynk, termasuk pengaturan notifikasi push pada aplikasi Blynk saat kondisi tertentu tercapai.
 ## Getting Started
 ### Prerequisites
-- Clear JOB 1a dan 1b.
-- HiveMQ websocket client at https://www.hivemq.com/demos/websocket-client/.
-- Node-RED installation
+- Clear JOB 2.
+- Blynk installation
 
 ### Installation
 
@@ -31,9 +30,4 @@ Implementasi sensor dan visualisasi data menggunakan MQTT yang dikombinasikan de
     ```plaintext
     const char* ssid     = "your-ssid"; //your wifi ssid
     const char* password = "ssid-passw"; //your wifi password
-    ```
-7. Pada program baris ke `17` dan `18` yang berisikan program topic temperature dan distance, silahkan sesuaikan dengan nama topic teman-teman
-    ```plaintext
-    const char* temperature_topic = "your-topic/temp";
-    const char* distance_topic = "your-topic/distance";
     ```
