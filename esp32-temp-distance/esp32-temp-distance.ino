@@ -1,29 +1,36 @@
-#include <Arduino.h>
+// Blynk Configuration
+#define BLYNK_TEMPLATE_ID  "template_id_here"
+#define BLYNK_TEMPLATE_NAME "template_name_here"
+#define BLYNK_AUTH_TOKEN    "auth_token_here"
 
+#include <Arduino.h>
+#include <ArduinoJson.h>          // https://github.com/bblanchon/ArduinoJson
 #include <WiFi.h>
-#include <PubSubClient.h>
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
+#include <BlynkSimpleEsp32.h>      // Library for blynk IoT
 
-#define DHT_PIN 21 // Pin GPIO untuk sensor DS18B20
-#define TRIGGER_PIN 23 // Pin GPIO untuk trigger HC-SR04
-#define ECHO_PIN 22 // Pin GPIO untuk echo HC-SR04
-#define MAX_DISTANCE 400 // Jarak maksimum yang akan diukur oleh sensor HC-SR04
-#define INTERVAL 5000 // Interval pengiriman data ke server MQTT (ms)
+#define DHT_PIN 21 // Pin GPIO untuk sensor 
 
-const char* ssid     = "Wokwi-GUEST"; //your wifi ssid
+const char* ssid     = ""; //your wifi ssid
 const char* password = ""; //your wifi password
-const char* mqtt_server = "broker.hivemq.com";
 
-const char* temperature_topic = "esp32-ariff/temp";
-const char* distance_topic = "esp32-ariff/distance";
+char blynkTemplateId[40];
+char blynkTemplateName[40];
+char blynkAuthToken[34];
 
 WiFiClient espClient;
-PubSubClient client(espClient);
 DHT dht(DHT_PIN, DHT11);
-long lastMsg = 0;
-float temperature = 0;
-float distance = 0;
+float temp = 0;
+float humi = 0;
+
+// Blynk setup
+BlynkTimer timer;
+
+void sendToBlynk(float temp, float humi) {
+  Blynk.virtualWrite(V0, temp);          // Send CO2 data to Blynk
+  Blynk.virtualWrite(V1, humi);           // Send CO data to Blynk
+}
 
 void setup_wifi() {
   delay(10);
@@ -40,53 +47,48 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
-void reconnect() {
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    if (client.connect("clientId-xEZb7frpLH")) {
-      Serial.println("connected");
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      delay(5000);
-    }
-  }
-}
-
 void setup() {
   Serial.begin(115200);
   setup_wifi();
-  client.setServer(mqtt_server, 1883);
   dht.begin();
-  pinMode(TRIGGER_PIN, OUTPUT);
-  pinMode(ECHO_PIN, INPUT);
+
+  Blynk.config(blynkAuthToken);
+  Blynk.connect();
+
+  // Setup a function to be called every second
+  timer.setInterval(1000L, []() {
+
+    temp = dht.readTemperature();
+    humi = dht.readHumidity();
+
+    Serial.print("Temperature: ");
+    Serial.println(temp);
+    Serial.print("Humidity: ");
+    Serial.println(humi);
+    
+
+    Blynk.logEvent("gas_safe_alarm", "AMAN! Kadar CO atau CO2 RENDAH");
+
+    if (temp > 35.0 ) {
+      Serial.println("Status: Panas");
+
+      Blynk.logEvent("temperature_alarm", "Suhu terlalu panas");   
+    }
+    
+    if ( humi > 80.0) {
+      Serial.println("Status: Lembab - Ruangan Terlalu Lembab");
+
+      Blynk.logEvent("humidity_alarm", "Ruangan Terlalu lembab, buka jendela!");
+    }
+    
+    // Send data to Blynk
+    sendToBlynk(temp, humi);
+    delay(500);
+  });
 }
 
+
 void loop() {
-  if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
-  long now = millis();
-  if (now - lastMsg > INTERVAL) {
-    lastMsg = now;
-    temperature = dht.readTemperature();
-    Serial.print("Temperature: ");
-    Serial.println(temperature);
-    client.publish(temperature_topic, String(temperature).c_str());
-    
-    float duration, distance;
-    digitalWrite(TRIGGER_PIN, LOW);  
-    delayMicroseconds(2); 
-    digitalWrite(TRIGGER_PIN, HIGH);
-    delayMicroseconds(10); 
-    digitalWrite(TRIGGER_PIN, LOW);
-    duration = pulseIn(ECHO_PIN, HIGH);
-    distance = (duration / 2) * 0.0343;
-    Serial.print("distance: ");
-    Serial.println(distance);
-    client.publish(distance_topic, String(distance).c_str());
-  }
-  delay(100);
+  Blynk.run();
+  timer.run();
 }
