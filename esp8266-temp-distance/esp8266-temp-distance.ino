@@ -85,3 +85,19 @@ void setup() {
     
     if (humi > 80.0) {
       Serial.println("Status: Lembab - Ruangan Terlalu Lembab");
+      Blynk.logEvent("humidity_alarm", "Ruangan terlalu lembab, buka jendela!");
+    }
+
+    // Kirim data ke Blynk
+    sendToBlynk(temp, humi);
+  });
+}
+
+void loop() {
+  if (WiFi.status() != WL_CONNECTED) {
+    setup_wifi(); // Coba reconnect jika koneksi terputus
+  }
+  
+  Blynk.run();
+  timer.run();
+}
