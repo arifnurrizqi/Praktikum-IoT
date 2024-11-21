@@ -4,19 +4,17 @@
 #define BLYNK_AUTH_TOKEN    "auth_token_here"
 
 #include <Arduino.h>
-#include <ArduinoJson.h>          // https://github.com/bblanchon/ArduinoJson
+#include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
-#include <BlynkSimpleEsp8266.h>      // Library for blynk IoT
+#include <BlynkSimpleEsp8266.h>
 
-#define DHT_PIN 21 // Pin GPIO untuk sensor 
+#define DHT_PIN D4 // Pin GPIO untuk sensor, sesuaikan dengan ESP8266
 
-const char* ssid     = ""; //your wifi ssid
-const char* password = ""; //your wifi password
+const char* ssid     = "your_wifi_ssid";
+const char* password = "your_wifi_password";
 
-char blynkTemplateId[40];
-char blynkTemplateName[40];
 char blynkAuthToken[34];
 
 WiFiClient espClient;
@@ -27,9 +25,9 @@ float humi = 0;
 // Blynk setup
 BlynkTimer timer;
 
-void sendToBlynk(float temp, float humi, float distance) {
-  Blynk.virtualWrite(V0, temp);          // Send CO2 data to Blynk
-  Blynk.virtualWrite(V1, humi);           // Send CO data to Blynk
+void sendToBlynk(float temp, float humi) {
+  Blynk.virtualWrite(V0, temp);
+  Blynk.virtualWrite(V1, humi);
 }
 
 void setup_wifi() {
@@ -38,12 +36,15 @@ void setup_wifi() {
   Serial.print("Connecting to ");
   Serial.println(ssid);
   WiFi.begin(ssid, password);
+  
+  // Tunggu hingga koneksi berhasil
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
   Serial.println("");
-  Serial.print("WiFi connected, IP address: ");
+  Serial.println("WiFi connected");
+  Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 }
 
@@ -52,49 +53,35 @@ void setup() {
   setup_wifi();
   dht.begin();
 
+  // Konfigurasi Blynk
   Blynk.config(blynkAuthToken);
-  Blynk.connect();
 
-  // Setup a function to be called every second
+  // Tambahkan pengecekan koneksi ke server Blynk
+  if (!Blynk.connect()) {
+    Serial.println("Blynk failed to connect. Check your credentials.");
+  }
+
+  // Timer untuk membaca sensor
   timer.setInterval(1000L, []() {
-
     temp = dht.readTemperature();
     humi = dht.readHumidity();
+
+    if (isnan(temp) || isnan(humi)) {
+      Serial.println("Failed to read from DHT sensor!");
+      return; // Jika pembacaan gagal, hentikan eksekusi callback
+    }
 
     Serial.print("Temperature: ");
     Serial.println(temp);
     Serial.print("Humidity: ");
     Serial.println(humi);
-    
 
     Blynk.logEvent("gas_safe_alarm", "AMAN! Kadar CO atau CO2 RENDAH");
 
     if (temp > 35.0 ) {
       Serial.println("Status: Panas");
-
-      Blynk.logEvent("temperature_alarm", "Suhu terlalu panas");   
+      Blynk.logEvent("temperature_alarm", "Suhu terlalu panas");
     }
     
-    if ( humi > 80.0) {
+    if (humi > 80.0) {
       Serial.println("Status: Lembab - Ruangan Terlalu Lembab");
-
-      Blynk.logEvent("humidity_alarm", "Ruangan Terlalu lembab, buka jendela!");
-    }
-    
-    if (distance < 10) {
-      Serial.println("Status: Dekat - object terlalu dekat!");
-
-      Blynk.logEvent("distance_alarm", "BAHAYA! object terlalu dekat!");
-    }
-    
-    // Send data to Blynk
-    sendToBlynk(temp, humi);
-    delay(500);
-  });
-}
-
-
-void loop() {
-  Blynk.run();
-  timer.run();
-}
