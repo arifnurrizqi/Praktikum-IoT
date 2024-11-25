@@ -1,87 +1,121 @@
-#define BLYNK_TEMPLATE_ID "..."
-#define BLYNK_TEMPLATE_NAME "..."
-#define BLYNK_AUTH_TOKEN "..."
-
-#include <Arduino.h>
 #include <ESP8266WiFi.h>
-#include <Adafruit_Sensor.h>
-#include <DHT.h>
-#include <BlynkSimpleEsp8266.h>
+#include <FirebaseESP8266.h>
+#include "DHT.h"
 
-#define BLYNK_PRINT Serial
-#define DHT_PIN D2
+#define relay  D6 // pin of relay for valve in pin 13
+#define dht_pin D5 // pin of water flow sensor in pin 12
 
-const char* ssid     = "realme C17";
-const char* password = "12345678";
+#define DHTTYPE DHT11   // DHT 11
 
-char blynkAuthToken[34];
-DHT dht(DHT_PIN, DHT11);
-float temp = 0;
-float humi = 0;
+// Replace with your network credentials
+const char* ssid = "";
+const char* password = "";
 
-BlynkTimer timer;
+// Replace with your Firebase project credentials
+#define FIREBASE_HOST "https://4-default-rtdb.asia-southeast1.firebasedatabase.app/" // isi dengan link firebase database anda
+#define FIREBASE_AUTH "database-secret" // isi dengan key database secret anda
 
-void sendToBlynk(float temp, float humi) {
-  Blynk.virtualWrite(V1, temp);
-  Blynk.virtualWrite(V0, humi);
-}
+FirebaseData firebaseData;
+FirebaseConfig firebaseConfig;
+FirebaseAuth firebaseAuth;
 
-void setup_wifi() {
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
+DHT dht(dht_pin, DHTTYPE);
+
+void setup() {
+  Serial.begin(115200);
+
+  dht.begin();
+
+  pinMode(relay, OUTPUT);
+  digitalWrite(relay, HIGH);
+
+  // Connect to Wi-Fi network
   WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi ");
+  Serial.print(ssid);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("Connected to WiFi");
+  Serial.println();
+  Serial.println("WiFi connected");
+
+  // Print the IP address
+  Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-}
 
-void setup() {
-  Serial.begin(115200);
-  strcpy(blynkAuthToken, BLYNK_AUTH_TOKEN);
-  setup_wifi();
-  dht.begin();
-  Blynk.config(blynkAuthToken);
-  Blynk.connect();
+  // Initialize Firebase connection
+  firebaseConfig.host = FIREBASE_HOST;
+  firebaseConfig.signer.tokens.legacy_token = FIREBASE_AUTH;
 
-  timer.setInterval(1000L, []() {
-    temp = dht.readTemperature();
-    humi = dht.readHumidity();
+  Firebase.begin(&firebaseConfig, &firebaseAuth);
+  Firebase.reconnectWiFi(true);
 
-    if (isnan(temp) || isnan(humi)) {
-      Serial.println("Failed to read from DHT sensor!");
-      return;
-    }
+  // Starting Firebase Streaming to get data reset status
+  if (Firebase.beginStream(firebaseData, "/realtime/relay_status")) {
+    Serial.println("Firebase stream started...");
+  } else {
+    Serial.print("Could not start stream: ");
+    Serial.println(firebaseData.errorReason());
+  }
 
-    Serial.print("Temperature: ");
-    Serial.println(temp);
-    Serial.print("Humidity: ");
-    Serial.println(humi);
-
-    static bool tempAlarmSent = false;
-    static bool humiAlarmSent = false;
-
-    if (temp > 35.0 && !tempAlarmSent) {
-      Blynk.logEvent("temperature_alarm", "Suhu terlalu panas");
-      tempAlarmSent = true;
-    } else if (temp <= 35.0) {
-      tempAlarmSent = false;
-    }
-
-    if (humi > 80.0 && !humiAlarmSent) {
-      Blynk.logEvent("humidity_alarm", "Ruangan Terlalu lembab, buka jendela!");
-      humiAlarmSent = true;
-    } else if (humi <= 80.0) {
-      humiAlarmSent = false;
-    }
-
-    sendToBlynk(temp, humi);
-  });
+  // Set callback functions for event stream
+  Firebase.setStreamCallback(firebaseData, streamCallback, streamTimeoutCallback);
 }
 
 void loop() {
-  Blynk.run();
-  timer.run();
+  // Reading temperature or humidity takes about 250 milliseconds!
+  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+  float h = dht.readHumidity();
+  // Read temperature as Celsius (the default)
+  float t = dht.readTemperature();
+
+  // Check if any reads failed and exit early (to try again).
+  if (isnan(h) || isnan(t)) {
+    Serial.println(F("Failed to read from DHT sensor!"));
+    return;
+  }
+
+  Serial.print(F("Humidity: "));
+  Serial.print(h);
+  Serial.print(F("%  Temperature: "));
+  Serial.print(t);
+  Serial.println(F("°C "));
+
+  // rubah data ke string 
+  String formatedTemp = String(t, 2);
+  String formatedHumi = String(h, 2);
+
+  Firebase.setString(firebaseData, "/realtime/temp", formatedTemp);
+  Firebase.setString(firebaseData, "/realtime/humi", formatedHumi);
+
+  Serial.println("Data sent to Firebase");
+
+  delay(500);
+}
+
+// Callback function when data on a node changes
+void streamCallback(StreamData data) {
+  Serial.println("Stream data received...");
+  Serial.print("Path: ");
+  Serial.println(data.dataPath());
+  Serial.print("Data: ");
+  Serial.println(data.stringData());
+  
+  // Jika data diterima, aktifkan atau nonaktifkan valve
+  if (data.stringData() == "true") {
+    digitalWrite(relay, LOW);
+    Serial.println("relay On");
+  } else if (data.stringData() == "false") {
+    digitalWrite(relay, HIGH);
+    Serial.println("relay Off");
+  }
+}
+
+// Callback function when timeout occurs
+void streamTimeoutCallback(bool timeout) {
+  if (timeout) {
+    Serial.println("Stream timeout, resuming...");
+    Firebase.beginStream(firebaseData, "/realtime/relay_status");
+  }
 }
