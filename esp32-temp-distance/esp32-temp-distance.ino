@@ -1,96 +1,129 @@
-// Blynk Configuration
-#define BLYNK_TEMPLATE_ID  "template_id_here"
-#define BLYNK_TEMPLATE_NAME "template_name_here"
-#define BLYNK_AUTH_TOKEN    "auth_token_here"
-
-#include <Arduino.h>
 #include <WiFi.h>
-#include <Adafruit_Sensor.h>
-#include <DHT.h>
-#include <BlynkSimpleEsp32.h> // Library for Blynk IoT
+#include <Firebase_ESP_Client.h>
+#include "DHT.h"
 
-#define DHT_PIN 21 // Pin GPIO untuk sensor, sesuaikan dengan pin ESP32 Anda
+// Definisi pin
+#define relay 18  // Pin relay
+#define dht_pin 17 // Pin DHT
 
-const char* ssid     = "your_wifi_ssid"; // WiFi SSID
-const char* password = "your_wifi_password"; // WiFi Password
+#define DHTTYPE DHT11 // Tipe DHT
 
-DHT dht(DHT_PIN, DHT11);
-float temp = 0;
-float humi = 0;
+// Kredensial Wi-Fi
+const char* ssid = "";
+const char* password = "";
 
-// Blynk setup
-BlynkTimer timer;
+// Kredensial Firebase
+#define FIREBASE_HOST "https://default-rtdb.asia-southeast1.firebasedatabase.app/" // Ganti dengan Firebase Host Anda
+#define FIREBASE_AUTH "database-secret" // Ganti dengan Firebase Secret Anda
 
-void sendToBlynk(float temp, float humi) {
-  Blynk.virtualWrite(V0, temp); // Kirim data suhu ke Blynk
-  Blynk.virtualWrite(V1, humi); // Kirim data kelembapan ke Blynk
-}
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
 
-void setup_wifi() {
-  delay(10);
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
+DHT dht(dht_pin, DHTTYPE);
 
+void setup() {
+  Serial.begin(115200);
+
+  dht.begin();
+
+  pinMode(relay, OUTPUT);
+  digitalWrite(relay, HIGH);
+
+  // Koneksi Wi-Fi
   WiFi.begin(ssid, password);
-
-  // Tunggu koneksi WiFi
+  Serial.print("Connecting to WiFi ");
+  Serial.print(ssid);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
   Serial.println();
   Serial.println("WiFi connected");
+
+  // Print alamat IP
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-}
 
-void setup() {
-  Serial.begin(115200);
+  // Konfigurasi Firebase
+  config.host = FIREBASE_HOST;
+  config.signer.tokens.legacy_token = FIREBASE_AUTH;
 
-  setup_wifi();
-  dht.begin();
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
 
-  // Konfigurasi Blynk
-  Blynk.config(BLYNK_AUTH_TOKEN);
-
-  // Coba koneksi ke server Blynk
-  if (!Blynk.connect()) {
-    Serial.println("Failed to connect to Blynk. Check your token and connection.");
+  // Memulai streaming data dari Firebase
+  if (Firebase.RTDB.beginStream(&fbdo, "/realtime/relay_status")) {
+    Serial.println("Firebase stream started...");
+  } else {
+    Serial.print("Could not start stream: ");
+    Serial.println(fbdo.errorReason());
   }
 
-  // Timer untuk membaca data setiap 1 detik
-  timer.setInterval(1000L, []() {
-    temp = dht.readTemperature();
-    humi = dht.readHumidity();
-
-    if (isnan(temp) || isnan(humi)) {
-      Serial.println("Failed to read from DHT sensor!");
-      return;
-    }
-
-    Serial.print("Temperature: ");
-    Serial.println(temp);
-    Serial.print("Humidity: ");
-    Serial.println(humi);
-
-    Blynk.logEvent("gas_safe_alarm", "AMAN! Kadar CO atau CO2 RENDAH");
-
-    if (temp > 35.0) {
-      Serial.println("Status: Panas");
-      Blynk.logEvent("temperature_alarm", "Suhu terlalu panas");
-    }
-
-    if (humi > 80.0) {
-      Serial.println("Status: Lembab - Ruangan Terlalu Lembab");
-      Blynk.logEvent("humidity_alarm", "Ruangan Terlalu lembab, buka jendela!");
-    }
-
-    // Kirim data ke Blynk
-    sendToBlynk(temp, humi);
-  });
+  // Callback untuk data stream
+  Firebase.RTDB.setStreamCallback(&fbdo, streamCallback, streamTimeoutCallback);
 }
 
 void loop() {
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi disconnected.
+  // Membaca data suhu dan kelembapan
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+
+  if (isnan(h) || isnan(t)) {
+    Serial.println(F("Failed to read from DHT sensor!"));
+    return;
+  }
+
+  Serial.print(F("Humidity: "));
+  Serial.print(h);
+  Serial.print(F("%  Temperature: "));
+  Serial.print(t);
+  Serial.println(F("°C"));
+
+  // Konversi data ke string
+  String formatedTemp = String(t, 2);
+  String formatedHumi = String(h, 2);
+
+  // Mengirim data ke Firebase
+  if (Firebase.RTDB.setString(&fbdo, "/realtime/temp", formatedTemp)) {
+    Serial.println("Temperature sent to Firebase");
+  } else {
+    Serial.print("Error sending temp: ");
+    Serial.println(fbdo.errorReason());
+  }
+
+  if (Firebase.RTDB.setString(&fbdo, "/realtime/humi", formatedHumi)) {
+    Serial.println("Humidity sent to Firebase");
+  } else {
+    Serial.print("Error sending humi: ");
+    Serial.println(fbdo.errorReason());
+  }
+
+  delay(500);
+}
+
+// Callback untuk data stream
+void streamCallback(FirebaseStream data) {
+  Serial.println("Stream data received...");
+  Serial.print("Path: ");
+  Serial.println(data.dataPath());
+  Serial.print("Data: ");
+  Serial.println(data.stringData());
+
+  // Kontrol relay
+  if (data.stringData() == "true") {
+    digitalWrite(relay, LOW);
+    Serial.println("Relay ON");
+  } else if (data.stringData() == "false") {
+    digitalWrite(relay, HIGH);
+    Serial.println("Relay OFF");
+  }
+}
+
+// Callback untuk timeout streaming
+void streamTimeoutCallback(bool timeout) {
+  if (timeout) {
+    Serial.println("Stream timeout, resuming...");
+    Firebase.RTDB.beginStream(&fbdo, "/realtime/relay_status");
+  }
+}
