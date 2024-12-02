@@ -1,129 +1,125 @@
 #include <WiFi.h>
-#include <Firebase_ESP_Client.h>
+#include <FirebaseESP32.h>
 #include "DHT.h"
 
-// Definisi pin
-#define relay 18  // Pin relay
-#define dht_pin 17 // Pin DHT
+// Konfigurasi Firebase
+#define FIREBASE_HOST "https://default-rtdb.asia-southeast1.firebasedatabase.app/" // Ganti dengan link Firebase Anda
+#define FIREBASE_AUTH "secret-database" // Ganti dengan database secret Anda
 
-#define DHTTYPE DHT11 // Tipe DHT
+// Konfigurasi WiFi
+const char* ssid = "your-ssid";          // Ganti dengan SSID WiFi Anda
+const char* password = "your-passw"; // Ganti dengan password WiFi Anda
 
-// Kredensial Wi-Fi
-const char* ssid = "";
-const char* password = "";
+// Konfigurasi DHT
+#define DHTPIN 17       // Pin DHT11
+#define DHTTYPE DHT11   // Jenis sensor DHT
+DHT dht(DHTPIN, DHTTYPE);
 
-// Kredensial Firebase
-#define FIREBASE_HOST "https://default-rtdb.asia-southeast1.firebasedatabase.app/" // Ganti dengan Firebase Host Anda
-#define FIREBASE_AUTH "database-secret" // Ganti dengan Firebase Secret Anda
+// Konfigurasi Relay
+#define RELAY_PIN 18
+FirebaseData firebaseData; // Objek Firebase
 
-FirebaseData fbdo;
-FirebaseAuth auth;
-FirebaseConfig config;
-
-DHT dht(dht_pin, DHTTYPE);
+// Variabel untuk interval waktu
+unsigned long previousMillis = 0; // Penyimpan waktu terakhir
+const unsigned long interval = 5000; // Interval 5 detik
 
 void setup() {
   Serial.begin(115200);
-
   dht.begin();
 
-  pinMode(relay, OUTPUT);
-  digitalWrite(relay, HIGH);
+  pinMode(RELAY_PIN, OUTPUT);
+  digitalWrite(RELAY_PIN, LOW); // Pastikan relay mati saat awal
 
-  // Koneksi Wi-Fi
+  // Koneksi ke WiFi
+  Serial.println("Connecting to WiFi...");
   WiFi.begin(ssid, password);
-  Serial.print("Connecting to WiFi ");
-  Serial.print(ssid);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println();
-  Serial.println("WiFi connected");
+  Serial.println("\nWiFi connected!");
 
-  // Print alamat IP
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-
-  // Konfigurasi Firebase
-  config.host = FIREBASE_HOST;
-  config.signer.tokens.legacy_token = FIREBASE_AUTH;
-
-  Firebase.begin(&config, &auth);
+  // Inisialisasi Firebase
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
   Firebase.reconnectWiFi(true);
 
-  // Memulai streaming data dari Firebase
-  if (Firebase.RTDB.beginStream(&fbdo, "/realtime/relay_status")) {
+  // Streaming data dari Firebase untuk relay_status
+  if (Firebase.beginStream(firebaseData, "/realtime/relay_status")) {
     Serial.println("Firebase stream started...");
   } else {
     Serial.print("Could not start stream: ");
-    Serial.println(fbdo.errorReason());
+    Serial.println(firebaseData.errorReason());
   }
 
-  // Callback untuk data stream
-  Firebase.RTDB.setStreamCallback(&fbdo, streamCallback, streamTimeoutCallback);
+  // Callback untuk menangani stream data
+  Firebase.setStreamCallback(firebaseData, streamCallback, streamTimeoutCallback);
 }
 
 void loop() {
-  // Membaca data suhu dan kelembapan
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
+  unsigned long currentMillis = millis();
 
-  if (isnan(h) || isnan(t)) {
-    Serial.println(F("Failed to read from DHT sensor!"));
-    return;
+  // Cek apakah sudah mencapai interval waktu 5 detik
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis; // Update waktu terakhir
+
+    // Membaca nilai dari sensor DHT11
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+
+    // Validasi pembacaan sensor
+    if (isnan(h) || isnan(t)) {
+      Serial.println("Failed to read from DHT sensor!");
+      return;
+    }
+
+    // Menampilkan data di Serial Monitor
+    Serial.print("Humidity: ");
+    Serial.print(h);
+    Serial.print("% Temperature: ");
+    Serial.print(t);
+    Serial.println("°C");
+
+    // Kirim data ke Firebase
+    if (Firebase.setFloat(firebaseData, "/realtime/humi", h)) {
+      Serial.println("Humidity sent to Firebase");
+    } else {
+      Serial.print("Failed to send humidity: ");
+      Serial.println(firebaseData.errorReason());
+    }
+
+    if (Firebase.setFloat(firebaseData, "/realtime/temp", t)) {
+      Serial.println("Temperature sent to Firebase");
+    } else {
+      Serial.print("Failed to send temperature: ");
+      Serial.println(firebaseData.errorReason());
+    }
   }
 
-  Serial.print(F("Humidity: "));
-  Serial.print(h);
-  Serial.print(F("%  Temperature: "));
-  Serial.print(t);
-  Serial.println(F("°C"));
-
-  // Konversi data ke string
-  String formatedTemp = String(t, 2);
-  String formatedHumi = String(h, 2);
-
-  // Mengirim data ke Firebase
-  if (Firebase.RTDB.setString(&fbdo, "/realtime/temp", formatedTemp)) {
-    Serial.println("Temperature sent to Firebase");
-  } else {
-    Serial.print("Error sending temp: ");
-    Serial.println(fbdo.errorReason());
-  }
-
-  if (Firebase.RTDB.setString(&fbdo, "/realtime/humi", formatedHumi)) {
-    Serial.println("Humidity sent to Firebase");
-  } else {
-    Serial.print("Error sending humi: ");
-    Serial.println(fbdo.errorReason());
-  }
-
-  delay(500);
+  // Firebase stream akan tetap berjalan tanpa mengganggu interval
 }
 
-// Callback untuk data stream
-void streamCallback(FirebaseStream data) {
+// Callback untuk menangani perubahan data dari Firebase
+void streamCallback(StreamData data) {
   Serial.println("Stream data received...");
   Serial.print("Path: ");
   Serial.println(data.dataPath());
   Serial.print("Data: ");
   Serial.println(data.stringData());
 
-  // Kontrol relay
+  // Kontrol relay berdasarkan data dari Firebase
   if (data.stringData() == "true") {
-    digitalWrite(relay, LOW);
+    digitalWrite(RELAY_PIN, HIGH); // Relay aktif
     Serial.println("Relay ON");
   } else if (data.stringData() == "false") {
-    digitalWrite(relay, HIGH);
+    digitalWrite(RELAY_PIN, LOW); // Relay mati
     Serial.println("Relay OFF");
   }
 }
 
-// Callback untuk timeout streaming
+// Callback untuk timeout stream
 void streamTimeoutCallback(bool timeout) {
   if (timeout) {
     Serial.println("Stream timeout, resuming...");
-    Firebase.RTDB.beginStream(&fbdo, "/realtime/relay_status");
+    Firebase.beginStream(firebaseData, "/realtime/relay_status");
   }
 }
