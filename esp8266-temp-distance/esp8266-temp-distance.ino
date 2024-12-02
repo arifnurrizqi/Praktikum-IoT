@@ -2,18 +2,18 @@
 #include <FirebaseESP8266.h>
 #include "DHT.h"
 
-#define relay  D6 // pin of relay for valve in pin 13
-#define dht_pin D5 // pin of water flow sensor in pin 12
+#define relay  D2 // pin of relay for valve in pin 13
+#define dht_pin D5 // pin of dht sensor in pin 12
 
 #define DHTTYPE DHT11   // DHT 11
 
 // Replace with your network credentials
-const char* ssid = "";
-const char* password = "";
+const char* ssid = "your-ssid";
+const char* password = "your-ssid-pssw";
 
 // Replace with your Firebase project credentials
-#define FIREBASE_HOST "https://4-default-rtdb.asia-southeast1.firebasedatabase.app/" // isi dengan link firebase database anda
-#define FIREBASE_AUTH "database-secret" // isi dengan key database secret anda
+#define FIREBASE_HOST "https://xxxxdefault-rtdb.asia-southeast1.firebasedatabase.app/"
+#define FIREBASE_AUTH "your-database-secret"
 
 FirebaseData firebaseData;
 FirebaseConfig firebaseConfig;
@@ -21,28 +21,26 @@ FirebaseAuth firebaseAuth;
 
 DHT dht(dht_pin, DHTTYPE);
 
+unsigned long previousMillis = 0;
+const long interval = 5000;  // Interval untuk pembacaan suhu dan kelembapan setiap 5 detik
+
 void setup() {
   Serial.begin(115200);
 
   dht.begin();
 
   pinMode(relay, OUTPUT);
-  digitalWrite(relay, HIGH);
+  digitalWrite(relay, LOW);
 
   // Connect to Wi-Fi network
   WiFi.begin(ssid, password);
   Serial.print("Connecting to WiFi ");
-  Serial.print(ssid);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
   Serial.println();
   Serial.println("WiFi connected");
-
-  // Print the IP address
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
 
   // Initialize Firebase connection
   firebaseConfig.host = FIREBASE_HOST;
@@ -64,34 +62,40 @@ void setup() {
 }
 
 void loop() {
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  float h = dht.readHumidity();
-  // Read temperature as Celsius (the default)
-  float t = dht.readTemperature();
+  unsigned long currentMillis = millis();
 
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t)) {
-    Serial.println(F("Failed to read from DHT sensor!"));
-    return;
+  // Cek jika interval waktu telah tercapai
+  if (currentMillis - previousMillis >= interval) {
+    previousMillis = currentMillis;
+
+    // Reading temperature or humidity
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+
+    if (isnan(h) || isnan(t)) {
+      Serial.println(F("Failed to read from DHT sensor!"));
+      return;
+    }
+
+    Serial.print(F("Humidity: "));
+    Serial.print(h);
+    Serial.print(F("%  Temperature: "));
+    Serial.print(t);
+    Serial.println(F("°C "));
+
+    // Rubah data ke string
+    String formatedTemp = String(t, 2);
+    String formatedHumi = String(h, 2);
+
+    // Kirim data ke Firebase
+    Firebase.setString(firebaseData, "/realtime/temp", formatedTemp);
+    Firebase.setString(firebaseData, "/realtime/humi", formatedHumi);
+
+    Serial.println("Data sent to Firebase");
   }
 
-  Serial.print(F("Humidity: "));
-  Serial.print(h);
-  Serial.print(F("%  Temperature: "));
-  Serial.print(t);
-  Serial.println(F("°C "));
-
-  // rubah data ke string 
-  String formatedTemp = String(t, 2);
-  String formatedHumi = String(h, 2);
-
-  Firebase.setString(firebaseData, "/realtime/temp", formatedTemp);
-  Firebase.setString(firebaseData, "/realtime/humi", formatedHumi);
-
-  Serial.println("Data sent to Firebase");
-
-  delay(500);
+  // Loop tidak terhalang oleh delay
+  // Kontrol relay tetap berjalan berdasarkan stream Firebase
 }
 
 // Callback function when data on a node changes
@@ -101,14 +105,14 @@ void streamCallback(StreamData data) {
   Serial.println(data.dataPath());
   Serial.print("Data: ");
   Serial.println(data.stringData());
-  
-  // Jika data diterima, aktifkan atau nonaktifkan valve
+
+  // Jika data diterima, aktifkan atau nonaktifkan relay
   if (data.stringData() == "true") {
-    digitalWrite(relay, LOW);
-    Serial.println("relay On");
+    digitalWrite(relay, LOW);  // Relay ON
+    Serial.println("Relay ON");
   } else if (data.stringData() == "false") {
-    digitalWrite(relay, HIGH);
-    Serial.println("relay Off");
+    digitalWrite(relay, HIGH); // Relay OFF
+    Serial.println("Relay OFF");
   }
 }
 
