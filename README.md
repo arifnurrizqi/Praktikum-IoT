@@ -1,17 +1,19 @@
-# Praktikum-IoT JOB 3 - Pengkondisian dan Pengolahan Data
+# Praktikum-IoT JOB 5 - Data Logger dengan Google Spreadsheet dan MySQL Database
 ## About
-Job ini berfokus pada pengolahan data dengan platform Blynk, termasuk pengaturan notifikasi push pada aplikasi Blynk saat kondisi tertentu tercapai.
+Job terakhir ini berfokus pada pembuatan sistem data logger dengan pencatatan data pada Google Spreadsheet dan MySQL Database untuk pengelolaan dan penyimpanan data jangka panjang.
 ## Getting Started
 ### Prerequisites
-- Clear JOB 2.
+- Google account service
 - Blynk installation
+- Laragon or XAMPP software
+- Database knowlage
+- Basic Programming
 
 ### Installation
 
 1. Siapkan komponen-komponen berikut
    - ESP32 atau ESP8266
    - sensor suhu DHT11 atau DHT22
-   - Sensor Ultrasonic
    - Project board
    - kabel Jumper secukupnya
    - Laptop
@@ -24,9 +26,7 @@ Job ini berfokus pada pengolahan data dengan platform Blynk, termasuk pengaturan
 
    ![wiring-diagram-image](img/wiring-esp8266.png)
    
-4. Program menggunakan program (jika anda menggunakan ESP32)->  [ESP32 program](esp32-temp-distance/esp32-temp-distance.ino)
-5. Program menggunakan program (jika anda menggunakan ESP8266)->  [ESP8266 program](esp8266-temp-distance/esp8266-temp-distance.ino)
-6. Pada program baris ke `14` dan `15` yang berisikan program ssid dan passw ssid, silahkan sesuaikan dengan nama ssid yang akan anda gunakan untuk koneksi internet
+4. Pada program baris ke `14` dan `15` yang berisikan program ssid dan passw ssid, silahkan sesuaikan dengan nama ssid yang akan anda gunakan untuk koneksi internet
     ```plaintext
     const char* ssid     = "your-ssid"; //your wifi ssid
     const char* password = "ssid-passw"; //your wifi password
