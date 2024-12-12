@@ -1,17 +1,15 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
-#include <WiFiClientSecureBearSSL.h>
 #include "DHT.h"
 
 // Replace with your network credentials
 const char* ssid     = "REPLACE_WITH_YOUR_SSID";
 const char* password = "REPLACE_WITH_YOUR_PASSWORD";
 
-// REPLACE with your Domain name and URL path or IP address with path
-const char* serverName = "https://example.com/post-esp-data.php";
+// Replace with your server's IP address and path
+const char* serverName = "http://192.168.1.100/post-esp-data.php"; // Use http and the IP address of your localhost server
 
-// Keep this API Key value to be compatible with the PHP code provided in the project page. 
-// If you change the apiKeyValue value, the PHP file /post-esp-data.php also needs to have the same key 
+// API key for server-side authentication
 String apiKeyValue = "asdkaks9832ealsd";
 
 #define DHTPIN 2     // Digital pin connected to the DHT sensor
@@ -21,10 +19,11 @@ DHT dht(DHTPIN, DHTTYPE);
 
 void setup() {
   Serial.begin(115200);
-  
+
+  // Connect to WiFi
   WiFi.begin(ssid, password);
-  Serial.println("Connecting");
-  while(WiFi.status() != WL_CONNECTED) { 
+  Serial.println("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
@@ -36,11 +35,9 @@ void setup() {
 }
 
 void loop() {
-  //Check WiFi connection status
-  if(WiFi.status()== WL_CONNECTED){
-
+  // Check WiFi connection status
+  if (WiFi.status() == WL_CONNECTED) {
     float h = dht.readHumidity();
-    // Read temperature as Celsius (the default)
     float t = dht.readTemperature();
 
     if (isnan(h) || isnan(t)) {
@@ -52,45 +49,39 @@ void loop() {
     Serial.print(h);
     Serial.print(F("%  Temperature: "));
     Serial.print(t);
-    Serial.print(F("°C "));
+    Serial.println(F("°C"));
 
-   std::unique_ptr<BearSSL::WiFiClientSecure>client(new BearSSL::WiFiClientSecure);
+    WiFiClient client;
+    HTTPClient http;
 
-    // Ignore SSL certificate validation
-    client->setInsecure();
-    
-    //create an HTTPClient instance
-    HTTPClient https;
-    
-    // Your Domain name with URL path or IP address with path
-    https.begin(*client, serverName);
-    
+    // Specify the URL to send data to
+    http.begin(client, serverName);
+
     // Specify content-type header
-    https.addHeader("Content-Type", "application/x-www-form-urlencoded");
-    
-    // Prepare your HTTP POST request data
-    String httpRequestData = "api_key=" + apiKeyValue + "&value1=" + String(t)
-                          + "&value2=" + String(h) + "";
+    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+    // Prepare HTTP POST request data
+    String httpRequestData = "api_key=" + apiKeyValue + "&value1=" + String(t) + "&value2=" + String(h);
     Serial.print("httpRequestData: ");
     Serial.println(httpRequestData);
 
     // Send HTTP POST request
-    int httpResponseCode = https.POST(httpRequestData);;
-    
-    if (httpResponseCode>0) {
+    int httpResponseCode = http.POST(httpRequestData);
+
+    if (httpResponseCode > 0) {
       Serial.print("HTTP Response code: ");
       Serial.println(httpResponseCode);
-    }
-    else {
+    } else {
       Serial.print("Error code: ");
       Serial.println(httpResponseCode);
     }
+
     // Free resources
-    https.end();
-  }
-  else {
+    http.end();
+  } else {
     Serial.println("WiFi Disconnected");
   }
-  //Send an HTTP POST request every 30 seconds
-  delay(30000);  
+
+  // Send an HTTP POST request every 30 seconds
+  delay(30000);
 }
