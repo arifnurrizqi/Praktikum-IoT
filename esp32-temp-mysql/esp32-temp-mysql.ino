@@ -4,17 +4,17 @@
 #include "DHT.h"
 
 // Replace with your network credentials
-const char* ssid     = "REPLACE_WITH_YOUR_SSID";
-const char* password = "REPLACE_WITH_YOUR_PASSWORD";
+const char* ssid     = "Dikit lagi lucu";
+const char* password = "pbalap123";
 
 // REPLACE with your Domain name and URL path or IP address with path
-const char* serverName = "https://example.com/post-esp-data.php";
+const char* serverName = "http://192.168.179.121/praktikumiot/post-esp-data.php";
 
 // Keep this API Key value to be compatible with the PHP code provided in the project page. 
 // If you change the apiKeyValue value, the PHP file /post-esp-data.php also needs to have the same key 
-String apiKeyValue = "asdkaks9832ealsd";
+String apiKeyValue = "12345678";
 
-#define DHTPIN 2     // Digital pin connected to the DHT sensor
+#define DHTPIN 13     // Digital pin connected to the DHT sensor
 #define DHTTYPE DHT11   // DHT 11
 
 DHT dht(DHTPIN, DHTTYPE);
@@ -54,24 +54,26 @@ void loop() {
     Serial.print(t);
     Serial.print(F("°C "));
 
-    WiFiClientSecure *client = new WiFiClientSecure;
-    client->setInsecure(); //don't use SSL certificate
-    HTTPClient https;
+    // WiFiClientSecure *client = new WiFiClientSecure;
+    // client->setInsecure(); //don't use SSL certificate
+
+    WiFiClient client;
+    HTTPClient http; 
     
     // Your Domain name with URL path or IP address with path
-    https.begin(*client, serverName);
+    // Your Domain name with URL path or IP address with path
+    http.begin(client, serverName);
     
     // Specify content-type header
-    https.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
     
     // Prepare your HTTP POST request data
-    String httpRequestData = "api_key=" + apiKeyValue + "&value1=" + String(t)
-                          + "&value2=" + String(h) + "";
+    String httpRequestData = "api_key=" + apiKeyValue + "&value1=" + String(t) + "&value2=" + String(h) + "";
     Serial.print("httpRequestData: ");
     Serial.println(httpRequestData);
 
     // Send HTTP POST request
-    int httpResponseCode = https.POST(httpRequestData);;
+    int httpResponseCode = http.POST(httpRequestData);;
     
     if (httpResponseCode>0) {
       Serial.print("HTTP Response code: ");
@@ -82,11 +84,11 @@ void loop() {
       Serial.println(httpResponseCode);
     }
     // Free resources
-    https.end();
+    http.end();
   }
   else {
     Serial.println("WiFi Disconnected");
   }
   //Send an HTTP POST request every 30 seconds
-  delay(30000);  
+  delay(5000);  
 }
